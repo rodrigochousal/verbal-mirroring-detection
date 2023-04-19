@@ -1,3 +1,17 @@
+import numpy as np
+
+class Recording:
+    def __init__(self, file_path, y, sampling_rate):
+        self.value = file_path
+        self.y = y
+        self.sampling_rate = sampling_rate
+    @property
+    def description(self):
+        sr = f"Sampling Rate: {str(self.sampling_rate)} samples p/s"
+        ts = f"Total Samples: {str(np.size(self.y))}"
+        length = f"Length: {str(np.size(self.y)/self.sampling_rate)} s"
+        return f"{sr}\n{ts}\n{length}\n"
+
 # Utterance class used to identify each time someone speaks
 class Utterance:
     def __init__(self, value, speaker_id, start_time, end_time):

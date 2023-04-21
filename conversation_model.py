@@ -4,7 +4,7 @@ from pre_processing import *
 
 class Recording:
     def __init__(self, file_path, y, sampling_rate):
-        self.value = file_path
+        self.file_path = file_path
         self.y = y
         self.sampling_rate = sampling_rate
     @property
@@ -29,21 +29,26 @@ class Utterance:
     
 class UtteranceMatrix:
     # Maybe use this class to do all the pre-processing on a single object?
-    def __init__(self, feature_matrix):
-        self.feature_matrix = feature_matrix
-    def downsample(self, window_size):
-        for i, features in enumerate(self.feature_matrix):
-            self.feature_matrix[i] = downsample(features, window_size)
+    def __init__(self, feature_matrix, window_size):
+        self.window_size = window_size
+        self.utterance_matrix = []
+        for i, features in enumerate(feature_matrix):
+            utterances = []
+            for j, value in enumerate(features):
+                start_time = j*self.window_size
+                end_time = start_time + self.window_size
+                utterance = Utterance(value, i, start_time, end_time)
+                utterances.append(utterance)
+            self.utterance_matrix.append(utterances)
+    def downsample(self):
+        for i, utterances in enumerate(self.utterance_matrix):
+            self.feature_matrix[i] = downsample(features, self.window_size)
     def normalize(self):
         for i, features in enumerate(self.feature_matrix):
             self.feature_matrix[i] = normalize(features)
 
 # Conversation class used to organize utterances
 class Conversation:
-    def __init__(self, length, utterances, fidelity):
+    def __init__(self, length, utterances):
         self.length = length # in seconds
         self.utterances = utterances # array of utterances
-        self.fidelity = fidelity
-    @property
-    def description(self):
-        return f"Speaker {self.speaker_id}: '{self.value}'"

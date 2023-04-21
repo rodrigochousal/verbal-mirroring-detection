@@ -3,12 +3,6 @@ import librosa
 
 from conversation_model import *
 
-def extract_rmse(recording, hop_length, frame_length):
-    """
-    Calculate RMSE for each frame length.
-    """
-    return librosa.feature.rms(y=recording.y, frame_length=frame_length, hop_length=hop_length, center=True)[0]
-
 # To-do: extract_cadence, extract_pitch, etc.
 
 def downsample(data, window_size):
@@ -32,6 +26,12 @@ def normalize(data):
         n_value = (value - min_value) / (max_value - min_value)
         normalized_data.append(n_value)
     return normalized_data
+
+def extract_rmse(recording, hop_length, frame_length):
+    """
+    Calculate RMSE for each frame length.
+    """
+    return librosa.feature.rms(y=recording.y, frame_length=frame_length, hop_length=hop_length, center=True)[0]
 
 def make_utterances(data, speaker_id, window_size):
     """

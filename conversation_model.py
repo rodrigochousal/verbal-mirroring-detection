@@ -21,14 +21,14 @@ class Utterance:
         self.speaker_id = speaker_id
         self.start_time = start_time
         self.end_time = end_time
-        self.length = end_time-start_time
-        # pitch, cadence
+    @property
+    def length(self):
+        return self.end_time-self.start_time
     @property
     def description(self):
         return f"Speaker {self.speaker_id}: '{self.value}'"
     
 class UtteranceMatrix:
-    # Maybe use this class to do all the pre-processing on a single object?
     def __init__(self, feature_matrix, window_size):
         self.window_size = window_size
         self.utterance_matrix = []
@@ -47,10 +47,14 @@ class Conversation:
         self.length = length # in seconds
         self.utterances = utterances # array of utterances
         self.window_size = window_size
+        
     def summarize_speakers(self):
+        """
+        Treat each consecutive utterance from the same speaker as one long, averaged, utterance
+        """
         summarized_utterances = []
         s_utterance = self.utterances[0]
-        for i, utterance in enumerate(self.utterances):
+        for utterance in self.utterances[1:]:
             if utterance.speaker_id != s_utterance.speaker_id:
                 # capture & reset
                 summarized_utterances.append(s_utterance)
@@ -59,8 +63,10 @@ class Conversation:
                 # fold in
                 n = s_utterance.length/self.window_size
                 new_value = (s_utterance.value*n + utterance.value)/(n+1)
-                folded = Utterance(new_value)
-                utterance_count += 1
-                utterance_tot_value += utterance.value
-
-        # treat each consecutive utterance from the same speaker as one long, averaged, utterance
+                new_end_time = s_utterance.end_time + self.window_size
+                folded = Utterance(new_value, s_utterance.speaker_id, s_utterance.start_time, new_end_time)
+                s_utterance = folded
+        self.utterances = summarized_utterances
+    def print_description(self):
+        for u in self.utterances:
+            print(f"Speaker {u.speaker_id}: {u.value} for {u.length}s")

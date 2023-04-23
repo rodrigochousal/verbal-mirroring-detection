@@ -74,27 +74,35 @@ if args.cadence:
     print("Analysing cadence of recordings...")
 
 # pre-process feature matrices
-for i, fm in enumerate(feature_matrices):
-    feature_matrices[i] = downsample(normalize(fm), window_size)
+for key, matrix in feature_matrices.items():
+    for i, data in enumerate(matrix):
+        # downsample & normalize each data list in each feature matrix
+        feature_matrices[key][i] = downsample(normalize(data), window_size)
 
 # convert feature matrices into utterance matrices
-utterance_matrices = []
-for fm in feature_matrices:
-    utterance_matrices.append(UtteranceMatrix(fm, window_size))
+utterance_matrices = {}
+for key, matrix in feature_matrices.items():
+    utterance_matrices[key] = UtteranceMatrix(matrix, window_size)
 
 # make conversations from utterance matrices
 conversations = []
-for matrix in utterance_matrices:
+for key, matrix_object in utterance_matrices.items():
+    matrix = matrix_object.utterance_matrix
     # find the list in matrix with the largest number of elements
-    max_length = max(len(l) for l in matrix)
+    max_length = max(len(list) for list in matrix)
     # create a new utterance list with the elements of the largest list
-    loudest_utterances = [element for sublist in matrix for element in sublist if len(sublist) == max_length]
-    for utterance_list in matrix:
-        for i, utterance in enumerate(utterance_list):
+    loudest_utterances = [element for list in matrix for element in list if len(list) == max_length]
+    for list in matrix:
+        for i, u in enumerate(list):
             # replace utterance with that of 'loudest' utterance in matrix
-            if loudest_utterances[i].value < utterance.value:
-                loudest_utterances[i] = utterance
+            if loudest_utterances[i].value < u.value:
+                loudest_utterances[i] = u
     conversation_length = len(loudest_utterances)*window_size
-    conversations.append(Conversation(conversation_length, loudest_utterances))
+    conversation = Conversation(conversation_length, loudest_utterances, window_size)
+    conversation.summarize_speakers()
+    conversations.append(conversation)
+
+for c in conversations:
+    c.print_description()
 
 # calculate mirroring score for each speaker in each conversation

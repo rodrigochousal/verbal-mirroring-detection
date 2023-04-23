@@ -12,11 +12,17 @@ from pre_processing import *
 AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac']
 # list of available features for analysis
 FEATURE_LABELS = ["volume, pitch, cadence"]
+# Number of audio samples that are skipped between successive analysis frames. 
+# Determines the overlap between adjacent frames and affects the temporal resolution of the analysis.
+HOP_LENGTH = 256
+# Number of audio samples that are included in each analysis frame. Determines the frequency resolution
+# of the analysis and affects the level of detail that can be captured in the audio signal.
+FRAME_LENGTH = 512
 
 # set up command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("audio_list", help="path to file containing list of audio file paths", required=True)
-parser.add_argument("--window_size", type=int, help="size of frame for each utterance, adjusts fidelity of the analysis (default 5s)", required=False)
+parser.add_argument("--window_size", type=int, help="size of utterance frame, adjusts analysis fidelity (default 5s)", required=False)
 for label in FEATURE_LABELS:
     parser.add_argument(f"--{label}", type=int, help=f"analyze {label} mirroring in the conversation", required=False)
 args = parser.parse_args()
@@ -35,9 +41,12 @@ for path in audio_paths:
         if ext not in AUDIO_EXTENSIONS:
             print(f"{path} is not an audio file.")
             raise SystemExit(1)
+
 # read in the window size for analysing audio files
 if args.window_size:
     window_size = args.window_size
+else:
+    window_size = 5
 
 # y: amplitude at a specific point in time
 # sr: # of samples of y that are taken per second (Hz)
@@ -46,23 +55,12 @@ for path in audio_paths:
     y, sr = librosa.core.load(path, offset=30.0, duration=120.0)
     recordings.append(Recording(path, y, sr))
 
-# Hop length refers to the number of audio samples that are skipped between successive analysis 
-# frames in a digital audio signal processing operation. It determines the overlap between adjacent 
-# frames and affects the temporal resolution of the analysis.
-hop_length = 256
-# Frame length refers to the number of audio samples that are included in each analysis frame in a 
-# digital audio signal processing operation. It determines the frequency resolution of the analysis 
-# and affects the level of detail that can be captured in the audio signal.
-frame_length = 512
-# Determines the fidelity of analysis. Features are averaged every 'window_size' seconds. Default 5s.
-window_size = 5
-
 # extract desired features
 feature_matrices = [] # this should probably be a dictionary with volume:matrix, pitch:matrix, cadence:matrix
 if args.volume:
     rmse_matrix = []
     for r in recordings:
-        rmse_matrix.append(librosa.feature.rms(y=r.y, frame_length=frame_length, hop_length=hop_length, center=True)[0])
+        rmse_matrix.append(librosa.feature.rms(y=r.y, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH, center=True)[0])
     feature_matrices.append(rmse_matrix)
 if args.pitch:
     print(f"Applying pitch effect of {args.pitch} to {path}")

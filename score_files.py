@@ -8,25 +8,26 @@ import librosa
 from conversation_model import *
 from pre_processing import *
 
-# set up command line arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("audio_list", help="path to file containing list of audio file paths")
-parser.add_argument("--window_size", type=int, help="size of frame for each utterance, adjusts fidelity of the analysis (default 5s)")
-parser.add_argument("--volume", type=int, help="analyze volume mirroring in the conversation")
-parser.add_argument("--pitch", type=int, help="analyze pitch mirroring in the conversation")
-parser.add_argument("--cadence", type=int, help="analyze cadence mirroring in the conversation")
-args = parser.parse_args()
-
 # list of valid audio file extensions
 AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac']
+# list of available features for analysis
+FEATURE_LABELS = ["volume, pitch, cadence"]
+
+# set up command line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument("audio_list", help="path to file containing list of audio file paths", required=True)
+parser.add_argument("--window_size", type=int, help="size of frame for each utterance, adjusts fidelity of the analysis (default 5s)", required=False)
+for label in FEATURE_LABELS:
+    parser.add_argument(f"--{label}", type=int, help=f"analyze {label} mirroring in the conversation", required=False)
+args = parser.parse_args()
 
 # read in the list of file paths from the command line file
-with open(args.file_list, "r") as f:
-    audio_paths = f.read().splitlines()
-
+if args.audio_list:
+    with open(args.audio_list, "r") as f:
+        audio_paths = f.read().splitlines()
 # loop through the file paths and check if they are audio files
 for path in audio_paths:
-    # If isfile
+    # if is file
     if os.path.isfile(path):
         # get the file extension
         ext = os.path.splitext(path)[1].lower()
@@ -34,6 +35,9 @@ for path in audio_paths:
         if ext not in AUDIO_EXTENSIONS:
             print(f"{path} is not an audio file.")
             raise SystemExit(1)
+# read in the window size for analysing audio files
+if args.window_size:
+    window_size = args.window_size
 
 # y: amplitude at a specific point in time
 # sr: # of samples of y that are taken per second (Hz)
@@ -50,13 +54,11 @@ hop_length = 256
 # digital audio signal processing operation. It determines the frequency resolution of the analysis 
 # and affects the level of detail that can be captured in the audio signal.
 frame_length = 512
-# Determines the fidelity of analysis. Features are averaged every 'window_size' seconds.
+# Determines the fidelity of analysis. Features are averaged every 'window_size' seconds. Default 5s.
 window_size = 5
 
 # extract desired features
 feature_matrices = [] # this should probably be a dictionary with volume:matrix, pitch:matrix, cadence:matrix
-if args.window_size:
-    window_size = args.window_size
 if args.volume:
     rmse_matrix = []
     for r in recordings:

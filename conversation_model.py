@@ -40,15 +40,27 @@ class UtteranceMatrix:
                 utterance = Utterance(value, i, start_time, end_time)
                 utterances.append(utterance)
             self.utterance_matrix.append(utterances)
-    def downsample(self):
-        for i, utterances in enumerate(self.utterance_matrix):
-            self.feature_matrix[i] = downsample(features, self.window_size)
-    def normalize(self):
-        for i, features in enumerate(self.feature_matrix):
-            self.feature_matrix[i] = normalize(features)
 
 # Conversation class used to organize utterances
 class Conversation:
-    def __init__(self, length, utterances):
+    def __init__(self, length, utterances, window_size):
         self.length = length # in seconds
         self.utterances = utterances # array of utterances
+        self.window_size = window_size
+    def summarize_speakers(self):
+        summarized_utterances = []
+        s_utterance = self.utterances[0]
+        for i, utterance in enumerate(self.utterances):
+            if utterance.speaker_id != s_utterance.speaker_id:
+                # capture & reset
+                summarized_utterances.append(s_utterance)
+                s_utterance = utterance
+            else:
+                # fold in
+                n = s_utterance.length/self.window_size
+                new_value = (s_utterance.value*n + utterance.value)/(n+1)
+                folded = Utterance(new_value)
+                utterance_count += 1
+                utterance_tot_value += utterance.value
+
+        # treat each consecutive utterance from the same speaker as one long, averaged, utterance

@@ -1,0 +1,3 @@
+./data/audio/clean/conv_01_pid1_clean.wav
+./data/audio/clean/conv_01_pid2_clean.wav
+./data/audio/clean/conv_01_pid3_clean.wav

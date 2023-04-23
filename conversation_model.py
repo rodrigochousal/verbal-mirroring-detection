@@ -69,4 +69,7 @@ class Conversation:
         self.utterances = summarized_utterances
     def print_description(self):
         for u in self.utterances:
-            print(f"Speaker {u.speaker_id}: {u.value} for {u.length}s")
+            if u.speaker_id != -1:
+                print(f"Speaker {u.speaker_id}: {u.value:.4f} for {u.length}s")
+            else:
+                print(f"Silence for {u.length}s")

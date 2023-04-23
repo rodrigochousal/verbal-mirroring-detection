@@ -97,6 +97,9 @@ for key, matrix_object in utterance_matrices.items():
             # replace utterance with that of 'loudest' utterance in matrix
             if loudest_utterances[i].value < u.value:
                 loudest_utterances[i] = u
+            elif loudest_utterances[i].value == u.value == 0:
+                # capture silence
+                loudest_utterances[i] = Utterance(0, -1, loudest_utterances[i].start_time, loudest_utterances[i].end_time)
     conversation_length = len(loudest_utterances)*window_size
     conversation = Conversation(conversation_length, loudest_utterances, window_size)
     conversation.summarize_speakers()

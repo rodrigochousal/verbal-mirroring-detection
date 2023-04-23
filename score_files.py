@@ -8,23 +8,25 @@ import librosa
 from conversation_model import *
 from pre_processing import *
 
-# list of valid audio file extensions
+# List of valid audio file extensions
 AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac']
-# list of available features for analysis
-FEATURE_LABELS = ["volume, pitch, cadence"]
+# List of available features for analysis
+FEATURE_LABELS = ["volume", "pitch", "cadence"]
 # Number of audio samples that are skipped between successive analysis frames. 
 # Determines the overlap between adjacent frames and affects the temporal resolution of the analysis.
 HOP_LENGTH = 256
 # Number of audio samples that are included in each analysis frame. Determines the frequency resolution
 # of the analysis and affects the level of detail that can be captured in the audio signal.
 FRAME_LENGTH = 512
+# Determines the size of an utterance frame, adjusts analysis fidelity
+DEFAULT_WINDOW_SIZE = 5
 
 # set up command line arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("audio_list", help="path to file containing list of audio file paths", required=True)
-parser.add_argument("--window_size", type=int, help="size of utterance frame, adjusts analysis fidelity (default 5s)", required=False)
+parser = argparse.ArgumentParser(description='Analyze some recordings.')
+parser.add_argument("audio_list", help="path to file containing list of audio file paths")
+parser.add_argument("--window_size", type=int, help="size of utterance frame, adjusts analysis fidelity (default 5s)")
 for label in FEATURE_LABELS:
-    parser.add_argument(f"--{label}", type=int, help=f"analyze {label} mirroring in the conversation", required=False)
+    parser.add_argument(f"--{label}", help=f"analyze {label} mirroring in the conversation", action='store_true')
 args = parser.parse_args()
 
 # read in the list of file paths from the command line file
@@ -41,29 +43,35 @@ for path in audio_paths:
         if ext not in AUDIO_EXTENSIONS:
             print(f"{path} is not an audio file.")
             raise SystemExit(1)
+recordings = []
+for path in audio_paths:
+    # y: amplitude at a specific point in time
+    # sr: # of samples of y that are taken per second (Hz)
+    y, sr = librosa.core.load(path, offset=30.0, duration=120.0)
+    recordings.append(Recording(path, y, sr))
 
 # read in the window size for analysing audio files
 if args.window_size:
     window_size = args.window_size
 else:
-    window_size = 5
-
-# y: amplitude at a specific point in time
-# sr: # of samples of y that are taken per second (Hz)
-recordings = []
-for path in audio_paths:
-    y, sr = librosa.core.load(path, offset=30.0, duration=120.0)
-    recordings.append(Recording(path, y, sr))
+    window_size = DEFAULT_WINDOW_SIZE
 
 # extract desired features
-feature_matrices = [] # this should probably be a dictionary with volume:matrix, pitch:matrix, cadence:matrix
-if args.volume:
+default_behavior = False
+feature_matrices = {}
+if not (args.volume or args.pitch or args.cadence):
+    print("No argument passed, defaulting to analysing volume...")
+    default_behavior = True
+if args.volume or default_behavior:
+    print("Analysing volume of recordings...")
     rmse_matrix = []
     for r in recordings:
         rmse_matrix.append(librosa.feature.rms(y=r.y, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH, center=True)[0])
-    feature_matrices.append(rmse_matrix)
+    feature_matrices['volume'] = rmse_matrix
 if args.pitch:
-    print(f"Applying pitch effect of {args.pitch} to {path}")
+    print("Analysing pitch of recordings...")
+if args.cadence:
+    print("Analysing cadence of recordings...")
 
 # pre-process feature matrices
 for i, fm in enumerate(feature_matrices):

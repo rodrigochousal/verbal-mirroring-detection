@@ -1,7 +1,6 @@
 import sys
 import os
 import argparse
-
 import librosa
 
 # project
@@ -54,10 +53,9 @@ for path in audio_paths:
     recordings.append(Recording(path, y, sr))
 
 # read in the window size for analysing audio files
+window_size = DEFAULT_WINDOW_SIZE
 if args.window_size:
     window_size = args.window_size
-else:
-    window_size = DEFAULT_WINDOW_SIZE
 
 # extract desired features
 default_behavior = False
@@ -69,18 +67,28 @@ if args.volume or default_behavior:
     print("Analysing volume of recordings...")
     rmse_matrix = []
     for r in recordings:
-        rmse_matrix.append(librosa.feature.rms(y=r.y, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH, center=True)[0])
+        data = librosa.feature.rms(y=r.y, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH, center=True)[0]
+        data =  np.array([x if x >= 0.1 else 0 for x in data])
+        # data =  np.array([x if x <= 1 else 0 for x in data])
+        rmse_matrix.append(data)
     feature_matrices['volume'] = rmse_matrix
 if args.pitch:
     print("Analysing pitch of recordings...")
 if args.cadence:
     print("Analysing cadence of recordings...")
 
+import numpy as np
 # pre-process feature matrices
+print("Pre-Processing data...")
 for key, matrix in feature_matrices.items():
     for i, data in enumerate(matrix):
-        # downsample & normalize each data list in each feature matrix
-        feature_matrices[key][i] = downsample(normalize(data), window_size)
+        # z_normalized = replace_outliers_zscore(data, 2)
+        rounded_data = []
+        for x in data:
+            rounded = round(x, 6)
+            rounded_data.append(rounded)
+        downsampled = downsample(data, window_size)
+        feature_matrices[key][i] = downsampled
 
 # convert feature matrices into utterance matrices
 utterance_matrices = {}
@@ -88,13 +96,16 @@ for key, matrix in feature_matrices.items():
     utterance_matrices[key] = UtteranceMatrix(matrix, window_size)
 
 # make conversations from utterance matrices
-conversations = []
+conversations = [] # each conversation represents a different feature
 for key, matrix_object in utterance_matrices.items():
     matrix = matrix_object.utterance_matrix
     # find the list in matrix with the largest number of elements
     max_length = max(len(list) for list in matrix)
     # create a new utterance list with the elements of the largest list
-    loudest_utterances = [element for list in matrix for element in list if len(list) == max_length]
+    for list in matrix:
+        if len(list) == max_length:
+            loudest_utterances = list
+            break
     for list in matrix:
         for i, u in enumerate(list):
             # replace utterance with that of 'loudest' utterance in matrix
@@ -129,13 +140,13 @@ if args.p2r:
     # Calculate average feature ratio of reply:prompt for each utterance
     speaker_p2r_ratios = {}
     # For each utterance
-    for i, u in enumerate(conversation.utterances):
+    for i, u in enumerate(sig_utterances):
         # Ignore silence or first utterance
         if (u.speaker_id == -1) or (i == 0): continue
         # Find previous non-zero utterance
         prev_nz_value = -1
         for j in range(i-1, 0, -1):
-            jth_value = conversation.utterances[j].value
+            jth_value = sig_utterances[j].value
             if (jth_value > 0):
                 prev_nz_value = jth_value
                 break
@@ -199,3 +210,15 @@ if args.r2r:
             sum_of_ratios += ratio[0]
         average_ratio = sum_of_ratios/len(ratios)
         print(f"Speaker {key} average R2R ratio: {average_ratio:.4f}")
+
+
+# Rebecca meeting notes:
+
+# Focus on:
+    # 1 - Showings results
+        # Incorporate some stats magic to get rid of outliers
+        # Graphs, scatter plots, scoring, etc.
+        # Run program on the entire dataset
+        # Come up with some sort of conclusion about people mirroring each other
+    # 2 - Implementing more features
+        # Use librosa for more feature options

@@ -62,8 +62,8 @@ class Conversation:
             else:
                 # fold in
                 n = s_utterance.length/self.window_size
-                new_value = (s_utterance.value*n + utterance.value)/(n+1)
                 new_end_time = s_utterance.end_time + self.window_size
+                new_value = (s_utterance.value*n + utterance.value)/(n+1)
                 folded = Utterance(new_value, s_utterance.speaker_id, s_utterance.start_time, new_end_time)
                 s_utterance = folded
         self.utterances = summarized_utterances

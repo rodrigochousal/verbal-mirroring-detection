@@ -7,12 +7,16 @@ from conversation_model import *
 
 def downsample(data, window_size):
     """
-    Downsample data by taking the mean of consecutive groups of 'window_size' elements.
+    Downsample data by taking the mean of consecutive groups of 'window_size' non-zero elements.
     """
     downsampled = []
     for i in range(0, len(data), window_size):
         chunk = data[i:i+window_size]
-        if chunk: downsampled.append(sum(chunk) / len(chunk))
+        non_zero_chunk = [i for i in chunk if i > 0]
+        if len(non_zero_chunk) > 0:
+            downsampled.append(sum(non_zero_chunk) / len(non_zero_chunk))
+        else:
+            downsampled.append(0)
     return downsampled
 
 def normalize(data):
@@ -26,6 +30,22 @@ def normalize(data):
         n_value = (value - min_value) / (max_value - min_value)
         normalized_data.append(n_value)
     return normalized_data
+
+def replace_outliers_zscore(data, threshold):
+    """
+    Replace outliers in a dataset with the value '0' using the z-score method.
+
+    Parameters:
+        data (array-like): The dataset to replace outliers in.
+        threshold (float): The z-score threshold above which data points are considered outliers.
+
+    Returns:
+        A new dataset with the outliers replaced with '0'.
+    """
+    z_scores = np.abs((data - np.mean(data)) / np.std(data))
+    mask = z_scores > threshold
+    data[mask] = 0
+    return data
 
 def extract_rmse(recording, hop_length, frame_length):
     """

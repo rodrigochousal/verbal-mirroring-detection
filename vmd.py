@@ -51,9 +51,21 @@ print("⏳ 2/3 Processing Data...")
 # For each conversation, perform the requested analysis
 for c in rich_conversations:
     if args.p2r:
-        prompt_to_response(c)
+        speaker_p2r_ratios = prompt_to_response(c)
+        for key, ratios in speaker_p2r_ratios.items():
+            sum_of_ratios = 0
+            for ratio in ratios:
+                sum_of_ratios += ratio[0]
+            average_ratio = sum_of_ratios/len(ratios)
+            print(f"Speaker {key} average P2R ratio: {average_ratio:.4f}")
     if args.r2r:
-        response_to_response(c)
+        speaker_r2r_ratios = response_to_response(c)
+        for key, ratios in speaker_r2r_ratios.items():
+            sum_of_ratios = 0
+            for ratio in ratios:
+                sum_of_ratios += ratio[0]
+            average_ratio = sum_of_ratios/len(ratios)
+            print(f"Speaker {key} average R2R ratio: {average_ratio:.4f}")
 
 print("✅ Finished Processing Data")
 print("⏳ 3/3 Post-Processing Data...")

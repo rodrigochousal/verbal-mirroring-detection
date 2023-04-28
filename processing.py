@@ -1,5 +1,15 @@
 def prompt_to_response(conversation):
-    # Calculate average feature ratio of reply:prompt for each utterance
+    '''
+    For each speaker in a conversation, calculates a feature's ratio of prompt to response.
+    E.g. response is 'i'th utterance and prompt is 'i-1'th utterance, each from a different speaker.
+
+    Args:
+    conversation: A Conversation object containing a 2D matrix of utterances.
+
+    Returns:
+    speaker_p2r_ratios: A dictionary containing speaker_id:[(prompt:repsonse ratio)]
+    '''
+    # Calculate average feature ratio of prompt:response for each utterance
     speaker_p2r_ratios = {}
     # For each utterance
     for i, u in enumerate(conversation.utterances):
@@ -13,21 +23,26 @@ def prompt_to_response(conversation):
                 prev_nz_value = jth_value
                 break
         if (prev_nz_value == -1): continue
-        # Calculate average feature ratio for reply:prompt non-zero utterance
+        # Calculate average feature ratio for prompt:response non-zero utterance
         sid = u.speaker_id
         p2r = prev_nz_value/u.value
         if sid in speaker_p2r_ratios:
             speaker_p2r_ratios[sid].append((p2r, u.length))
         else:
             speaker_p2r_ratios[sid] = [(p2r, u.length)]
-    for key, ratios in speaker_p2r_ratios.items():
-        sum_of_ratios = 0
-        for ratio in ratios:
-            sum_of_ratios += ratio[0]
-        average_ratio = sum_of_ratios/len(ratios)
-        print(f"Speaker {key} average P2R ratio: {average_ratio:.4f}")
+    return speaker_p2r_ratios
 
 def response_to_response(conversation):
+    '''
+    For each speaker in a conversation, calculates a feature's average ratio of response to response.
+    E.g. response is 'i'th utterance and response is 'i-1'th utterance, s.t. each utterance is from the same speaker.
+
+    Args:
+    conversation: A Conversation object containing a 2D matrix of utterances.
+
+    Returns:
+    None
+    '''
     # Calculate relative change in average feature value for same speaker's responses
     # compared to the prompter's relative change
     speaker_r2r_ratios = {}

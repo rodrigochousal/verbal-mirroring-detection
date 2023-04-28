@@ -1,9 +1,41 @@
+import os
 import numpy as np
 import librosa
 
 from conversation_model import *
 
-# To-do: extract_cadence, extract_pitch, etc.
+# List of valid audio file extensions
+AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac']
+
+def get_recordings_from(args):
+    # read in the list of file paths from the command line file
+    if args.audio_list:
+        with open(args.audio_list, "r") as f:
+            audio_paths = f.read().splitlines()
+    # loop through the file paths and check if they are audio files
+    for path in audio_paths:
+        # if is file
+        if os.path.isfile(path):
+            # get the file extension
+            ext = os.path.splitext(path)[1].lower()
+            # check if the file extension is in the list of valid audio extensions
+            if ext not in AUDIO_EXTENSIONS:
+                print(f"{path} is not an audio file.")
+                raise SystemExit(1)
+    recordings = []
+    for path in audio_paths:
+        # read in the start time and duration for analysis
+        start_time = 0
+        duration = librosa.get_duration(filename=path)
+        if args.start_time:
+            start_time = args.start_time
+        if args.duration:
+            duration = args.duration
+        # y: amplitude at a specific point in time
+        # sr: # of samples of y that are taken per second (Hz)
+        y, sr = librosa.core.load(path, offset=start_time, duration=duration)
+        recordings.append(Recording(path, y, sr))
+    return recordings
 
 def downsample(data, window_size):
     """

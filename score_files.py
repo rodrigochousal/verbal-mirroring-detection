@@ -5,11 +5,10 @@ import numpy as np
 import librosa
 
 # project
+from interface import *
 from conversation_model import *
 from pre_processing import *
 
-# List of valid audio file extensions
-AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac']
 # List of available features for analysis
 FEATURE_LABELS = ["volume", "pitch", "cadence"]
 # Number of audio samples that are skipped between successive analysis frames. 
@@ -21,46 +20,10 @@ FRAME_LENGTH = 512
 # Determines the size of an utterance frame, adjusts analysis fidelity
 DEFAULT_WINDOW_SIZE = 5
 
-# set up command line arguments
-parser = argparse.ArgumentParser(description='Analyze some recordings.')
-parser.add_argument("audio_list", help="path to file containing list of audio file paths")
-parser.add_argument("--window_size", type=int, help="size of utterance frame, adjusts analysis fidelity (default 5s)")
-parser.add_argument("--start_time", type=int, help="start time in seconds (default min)")
-parser.add_argument("--duration", type=int, help="duration in seconds (default max)")
-for label in FEATURE_LABELS:
-    parser.add_argument(f"--{label}", help=f"analyze {label} mirroring in the conversation", action='store_true')
-parser.add_argument("--transcription", help="print a transcription of speaker, value, length for each utterance in conversation", action='store_true')
-parser.add_argument("--r2r", help="score speakers on response to response", action='store_true')
-parser.add_argument("--p2r", help="score speakers on prompt to response", action='store_true')
-args = parser.parse_args()
-
-# read in the list of file paths from the command line file
-if args.audio_list:
-    with open(args.audio_list, "r") as f:
-        audio_paths = f.read().splitlines()
-# loop through the file paths and check if they are audio files
-for path in audio_paths:
-    # if is file
-    if os.path.isfile(path):
-        # get the file extension
-        ext = os.path.splitext(path)[1].lower()
-         # check if the file extension is in the list of valid audio extensions
-        if ext not in AUDIO_EXTENSIONS:
-            print(f"{path} is not an audio file.")
-            raise SystemExit(1)
-recordings = []
-for path in audio_paths:
-    # read in the start time and duration for analysis
-    start_time = 0
-    duration = librosa.get_duration(filename=path)
-    if args.start_time:
-        start_time = args.start_time
-    if args.duration:
-        duration = args.duration
-    # y: amplitude at a specific point in time
-    # sr: # of samples of y that are taken per second (Hz)
-    y, sr = librosa.core.load(path, offset=start_time, duration=duration)
-    recordings.append(Recording(path, y, sr))
+# Build Parser object to read in options from command line
+args = setup_parser(FEATURE_LABELS)
+# Build Recording list from arguments passed in command line
+recordings = get_recordings(args)
 
 # read in the window size for analysing audio files
 window_size = DEFAULT_WINDOW_SIZE

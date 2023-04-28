@@ -1,7 +1,5 @@
 import numpy as np
 
-from pre_processing import *
-
 class Recording:
     def __init__(self, file_path, y, sampling_rate):
         self.file_path = file_path

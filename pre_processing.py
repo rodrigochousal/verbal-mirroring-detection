@@ -16,6 +16,14 @@ Feature Engineering: This step involves creating new features from existing data
 
 # List of valid audio file extensions
 AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac']
+# Number of audio samples that are skipped between successive analysis frames. 
+# Determines the overlap between adjacent frames and affects the temporal resolution of the analysis.
+HOP_LENGTH = 256
+# Number of audio samples that are included in each analysis frame. Determines the frequency resolution
+# of the analysis and affects the level of detail that can be captured in the audio signal.
+FRAME_LENGTH = 512
+
+# Pre-Processing
 
 def get_recordings(args):
     # read in the list of file paths from the command line file
@@ -111,6 +119,20 @@ def get_conversations(utterance_matrices, window_size):
         conversation.summarize_speakers()
         conversations.append(conversation)
     return conversations
+
+def enrich_conversations(conversations):
+    rich_conversations = []
+    for c in conversations:
+        rich_utterances = []
+        for u in c.utterances:
+            if u.speaker_id != -1:
+                rich_utterances.append(u)   
+        new_length = len(rich_utterances)*c.window_size
+        rich_conversation = Conversation(new_length, rich_utterances, c.window_size)
+        rich_conversations.append(rich_conversation)
+    return rich_conversations
+
+# Helper
 
 def downsample(data, window_size):
     """

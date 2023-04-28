@@ -4,10 +4,20 @@ import librosa
 
 from conversation_model import *
 
+'''
+Pre-processing in data analysis is the process of cleaning and transforming raw data into a format that is suitable for analysis. It involves several steps, including:
+Data Cleaning: This step involves identifying and correcting errors, missing values, and inconsistencies in the dataset. The goal is to ensure that the data is accurate, complete, and consistent.
+Data Integration: This step involves combining data from multiple sources into a single dataset. The goal is to create a complete and comprehensive dataset that can be used for analysis.
+Data Transformation: This step involves converting the data into a format that is suitable for analysis. This may include converting data types, scaling data, or normalizing data.
+Data Reduction: This step involves reducing the size of the dataset without losing important information. This may include removing irrelevant variables, identifying outliers, or using dimensionality reduction techniques.
+Data Discretization: This step involves converting continuous data into categorical data. This may include binning data into intervals or creating categories based on specific criteria.
+Feature Engineering: This step involves creating new features from existing data. This may include creating new variables based on existing variables, or transforming existing variables to create new insights.
+'''
+
 # List of valid audio file extensions
 AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac']
 
-def get_recordings_from(args):
+def get_recordings(args):
     # read in the list of file paths from the command line file
     if args.audio_list:
         with open(args.audio_list, "r") as f:
@@ -36,6 +46,71 @@ def get_recordings_from(args):
         y, sr = librosa.core.load(path, offset=start_time, duration=duration)
         recordings.append(Recording(path, y, sr))
     return recordings
+
+def extract_features(args, recordings):
+    default_behavior = False
+    feature_matrices = {}
+    if not (args.volume or args.pitch or args.cadence):
+        print("No argument passed, defaulting to analysing volume...")
+        default_behavior = True
+    if args.volume or default_behavior:
+        print("Analysing volume of recordings...")
+        rmse_matrix = []
+        for r in recordings:
+            data = librosa.feature.rms(y=r.y, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH, center=True)[0]
+            data =  np.array([x if x >= 0.1 else 0 for x in data])
+            # data =  np.array([x if x <= 1 else 0 for x in data])
+            rmse_matrix.append(data)
+        feature_matrices['volume'] = rmse_matrix
+    if args.pitch:
+        print("Analysing pitch of recordings...")
+    if args.cadence:
+        print("Analysing cadence of recordings...")
+    return feature_matrices
+
+def clean_up(feature_matrices, window_size):
+    for key, matrix in feature_matrices.items():
+        for i, data in enumerate(matrix):
+            # z_normalized = replace_outliers_zscore(data, 2)
+            rounded_data = []
+            for x in data:
+                rounded = round(x, 6)
+                rounded_data.append(rounded)
+            downsampled = downsample(data, window_size)
+            feature_matrices[key][i] = downsampled
+    return feature_matrices
+
+def get_utterance_matrices(feature_matrices, window_size):
+    utterance_matrices = {}
+    for key, matrix in feature_matrices.items():
+        utterance_matrices[key] = UtteranceMatrix(matrix, window_size)
+    return utterance_matrices
+
+def get_conversations(utterance_matrices, window_size):
+    conversations = []
+    for key, matrix_object in utterance_matrices.items():
+        matrix = matrix_object.utterance_matrix
+        # find the list in matrix with the largest number of elements
+        max_length = max(len(list) for list in matrix)
+        # create a new utterance list with the elements of the largest list
+        for list in matrix:
+            if len(list) == max_length:
+                loudest_utterances = list
+                break
+        for list in matrix:
+            for i, u in enumerate(list):
+                # replace utterance with that of 'loudest' utterance in matrix
+                if loudest_utterances[i].value < u.value:
+                    loudest_utterances[i] = u
+                elif loudest_utterances[i].value == u.value == 0:
+                    # capture silence
+                    # TODO: What utterance prompts or responds to silence? Is this useful? <---
+                    loudest_utterances[i] = Utterance(0, -1, loudest_utterances[i].start_time, loudest_utterances[i].end_time)
+        conversation_length = len(loudest_utterances)*window_size
+        conversation = Conversation(conversation_length, loudest_utterances, window_size)
+        conversation.summarize_speakers()
+        conversations.append(conversation)
+    return conversations
 
 def downsample(data, window_size):
     """
@@ -79,26 +154,7 @@ def replace_outliers_zscore(data, threshold):
     data[mask] = 0
     return data
 
-def extract_rmse(recording, hop_length, frame_length):
-    """
-    Calculate RMSE for each frame length.
-    """
-    return librosa.feature.rms(y=recording.y, frame_length=frame_length, hop_length=hop_length, center=True)[0]
 
-def make_utterances(data, speaker_id, window_size):
-    """
-    Create Utterance objects from data (optionally downsampled and normalized), 
-    with speaker_id and utterance length 'window_size'
-    """
-    utterances = []
-    for i, value in enumerate(data):
-        start_time = i*window_size
-        end_time = start_time + window_size
-        utterance = Utterance(value, speaker_id, start_time, end_time)
-        utterances.append(utterance)
-    return utterances
-
-def make_conversation(utterance_matrix, length, fidelity):
      # All utterance lists should be the same length, TODO: check this is passed length
     lengths = [len(x) for x in utterance_matrix]
     if not len(set(lengths)) == 1:

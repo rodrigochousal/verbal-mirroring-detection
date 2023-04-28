@@ -22,75 +22,22 @@ DEFAULT_WINDOW_SIZE = 5
 
 # Build Parser object to read in options from command line
 args = setup_parser(FEATURE_LABELS)
+
+print("Pre-Processing Data...")
+
 # Build Recording list from arguments passed in command line
 recordings = get_recordings(args)
-
+# Extract requested features from Recording list as matrix [volume, pitch, cadence, etc.] x [values for each]
+feature_matrices = extract_features(args, recordings)
+# Clean up data (round, normalize, and downsample)
 # read in the window size for analysing audio files
 window_size = DEFAULT_WINDOW_SIZE
-if args.window_size:
-    window_size = args.window_size
-
-# extract desired features
-default_behavior = False
-feature_matrices = {}
-if not (args.volume or args.pitch or args.cadence):
-    print("No argument passed, defaulting to analysing volume...")
-    default_behavior = True
-if args.volume or default_behavior:
-    print("Analysing volume of recordings...")
-    rmse_matrix = []
-    for r in recordings:
-        data = librosa.feature.rms(y=r.y, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH, center=True)[0]
-        data =  np.array([x if x >= 0.1 else 0 for x in data])
-        # data =  np.array([x if x <= 1 else 0 for x in data])
-        rmse_matrix.append(data)
-    feature_matrices['volume'] = rmse_matrix
-if args.pitch:
-    print("Analysing pitch of recordings...")
-if args.cadence:
-    print("Analysing cadence of recordings...")
-
-# pre-process feature matrices
-print("Pre-Processing data...")
-for key, matrix in feature_matrices.items():
-    for i, data in enumerate(matrix):
-        # z_normalized = replace_outliers_zscore(data, 2)
-        rounded_data = []
-        for x in data:
-            rounded = round(x, 6)
-            rounded_data.append(rounded)
-        downsampled = downsample(data, window_size)
-        feature_matrices[key][i] = downsampled
-
-# convert feature matrices into utterance matrices
-utterance_matrices = {}
-for key, matrix in feature_matrices.items():
-    utterance_matrices[key] = UtteranceMatrix(matrix, window_size)
-
-# make conversations from utterance matrices
-conversations = [] # each conversation represents a different feature
-for key, matrix_object in utterance_matrices.items():
-    matrix = matrix_object.utterance_matrix
-    # find the list in matrix with the largest number of elements
-    max_length = max(len(list) for list in matrix)
-    # create a new utterance list with the elements of the largest list
-    for list in matrix:
-        if len(list) == max_length:
-            loudest_utterances = list
-            break
-    for list in matrix:
-        for i, u in enumerate(list):
-            # replace utterance with that of 'loudest' utterance in matrix
-            if loudest_utterances[i].value < u.value:
-                loudest_utterances[i] = u
-            elif loudest_utterances[i].value == u.value == 0:
-                # capture silence
-                # TODO: What utterance prompts or responds to silence? Is this useful? <---
-                loudest_utterances[i] = Utterance(0, -1, loudest_utterances[i].start_time, loudest_utterances[i].end_time)
-    conversation_length = len(loudest_utterances)*window_size
-    conversation = Conversation(conversation_length, loudest_utterances, window_size)
-    conversation.summarize_speakers()
-    conversations.append(conversation)
+if args.window_size: window_size = args.window_size
+feature_matrices = clean_up(feature_matrices, window_size)
+# Build UtteranceMatrix list from feature matrix list
+utterance_matrices = get_utterance_matrices(feature_matrices, window_size)
+# Build Conversation list from UtteranceMatrix list; each represents a different feature
+conversations = get_conversation(utterance_matrices, window_size)
 
 # print transcription if argument was passed
 if args.transcription:
@@ -194,3 +141,4 @@ if args.r2r:
         # Come up with some sort of conclusion about people mirroring each other
     # 2 - Implementing more features
         # Use librosa for more feature options
+    # 3 - Part of write-up is how to use the code (make it more readable, and include readme for command line)

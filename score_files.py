@@ -1,6 +1,7 @@
 import sys
 import os
 import argparse
+import numpy as np
 import librosa
 
 # project
@@ -24,6 +25,8 @@ DEFAULT_WINDOW_SIZE = 5
 parser = argparse.ArgumentParser(description='Analyze some recordings.')
 parser.add_argument("audio_list", help="path to file containing list of audio file paths")
 parser.add_argument("--window_size", type=int, help="size of utterance frame, adjusts analysis fidelity (default 5s)")
+parser.add_argument("--start_time", type=int, help="start time in seconds (default min)")
+parser.add_argument("--duration", type=int, help="duration in seconds (default max)")
 for label in FEATURE_LABELS:
     parser.add_argument(f"--{label}", help=f"analyze {label} mirroring in the conversation", action='store_true')
 parser.add_argument("--transcription", help="print a transcription of speaker, value, length for each utterance in conversation", action='store_true')
@@ -47,9 +50,16 @@ for path in audio_paths:
             raise SystemExit(1)
 recordings = []
 for path in audio_paths:
+    # read in the start time and duration for analysis
+    start_time = 0
+    duration = librosa.get_duration(filename=path)
+    if args.start_time:
+        start_time = args.start_time
+    if args.duration:
+        duration = args.duration
     # y: amplitude at a specific point in time
     # sr: # of samples of y that are taken per second (Hz)
-    y, sr = librosa.core.load(path, offset=30.0, duration=120.0)
+    y, sr = librosa.core.load(path, offset=start_time, duration=duration)
     recordings.append(Recording(path, y, sr))
 
 # read in the window size for analysing audio files
@@ -77,7 +87,6 @@ if args.pitch:
 if args.cadence:
     print("Analysing cadence of recordings...")
 
-import numpy as np
 # pre-process feature matrices
 print("Pre-Processing data...")
 for key, matrix in feature_matrices.items():

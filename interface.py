@@ -1,6 +1,15 @@
 import argparse
 
 def setup_interface_parser(feature_labels):
+    '''
+    Set up argument parser for a command-line interface to analyze recordings of conversations.
+
+    Args:
+    feature_labels (list): A list of feature labels to analyze.
+
+    Returns:
+    parser.parse_args(): Parsed command-line arguments.
+    '''
     # set up command line arguments
     parser = argparse.ArgumentParser(description='Analyze some recordings.')
     parser.add_argument("audio_list", help="path to file containing list of audio file paths")

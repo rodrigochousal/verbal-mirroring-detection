@@ -11,19 +11,13 @@ from processing import *
 
 # List of available features for analysis
 FEATURE_LABELS = ["volume", "pitch", "cadence"]
-# Number of audio samples that are skipped between successive analysis frames. 
-# Determines the overlap between adjacent frames and affects the temporal resolution of the analysis.
-HOP_LENGTH = 256
-# Number of audio samples that are included in each analysis frame. Determines the frequency resolution
-# of the analysis and affects the level of detail that can be captured in the audio signal.
-FRAME_LENGTH = 512
 # Determines the size of an utterance frame, adjusts analysis fidelity
 DEFAULT_WINDOW_SIZE = 5
 
 # Build Parser object to read in options from command line
 args = setup_interface_parser(FEATURE_LABELS)
 
-print("Pre-Processing Data...")
+print("⏳ 1/3 Pre-Processing Data...")
 
 # Build Recording list from arguments passed in command line
 recordings = get_recordings(args)
@@ -51,7 +45,8 @@ if args.transcription:
 # Enrich each Conversation, removing silences
 rich_conversations = enrich_conversations(conversations)
 
-print("Processing Data...")
+print("✅ Finished Pre-Processing Data")
+print("⏳ 2/3 Processing Data...")
 
 # For each conversation, perform the requested analysis
 for c in rich_conversations:
@@ -60,11 +55,13 @@ for c in rich_conversations:
     if args.r2r:
         response_to_response(c)
 
+print("✅ Finished Processing Data")
+print("⏳ 3/3 Post-Processing Data...")
+
 # Rebecca meeting notes:
 
 # Focus on:
     # 1 - Showings results
-        # Incorporate some stats magic to get rid of outliers
         # Graphs, scatter plots, scoring, etc.
         # Run program on the entire dataset
         # Come up with some sort of conclusion about people mirroring each other

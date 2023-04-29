@@ -22,30 +22,9 @@ HOP_LENGTH = 256
 # of the analysis and affects the level of detail that can be captured in the audio signal.
 FRAME_LENGTH = 512
 
-def get_recordings(args):
-    # read in the list of file paths from the command line file
-    if args.audio_list:
-        with open(args.audio_list, "r") as f:
-            audio_paths = f.read().splitlines()
-    # loop through the file paths and check if they are audio files
-    for path in audio_paths:
-        # if is file
-        if os.path.isfile(path):
-            # get the file extension
-            ext = os.path.splitext(path)[1].lower()
-            # check if the file extension is in the list of valid audio extensions
-            if ext not in AUDIO_EXTENSIONS:
-                print(f"{path} is not an audio file.")
-                raise SystemExit(1)
+def get_recordings(audio_paths, start_time, duration):
     recordings = []
     for path in audio_paths:
-        # read in the start time and duration for analysis
-        start_time = 0
-        duration = librosa.get_duration(filename=path)
-        if args.start_time:
-            start_time = args.start_time
-        if args.duration:
-            duration = args.duration
         # y: amplitude at a specific point in time
         # sr: # of samples of y that are taken per second (Hz)
         y, sr = librosa.core.load(path, offset=start_time, duration=duration)
@@ -73,7 +52,7 @@ def extract_features(args, recordings):
         print("Analysing cadence of recordings...")
     return feature_matrices
 
-def clean_up(feature_matrices, u_length, duration):
+def clean_up(feature_matrices, duration, u_length):
     for key, matrix in feature_matrices.items():
         for i, data in enumerate(matrix):
             rounded_data = []
@@ -85,10 +64,7 @@ def clean_up(feature_matrices, u_length, duration):
             feature_matrices[key][i] = downsampled
     return feature_matrices
 
-def get_utterance_matrices(args, feature_matrices):
-    u_length = 0
-    if args.u_length:
-        u_length = args.u_length
+def get_utterance_matrices(feature_matrices, u_length):
     utterance_matrices = {}
     for key, matrix in feature_matrices.items():
         utterance_matrices[key] = UtteranceMatrix(matrix, u_length)

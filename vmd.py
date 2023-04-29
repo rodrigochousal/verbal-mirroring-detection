@@ -11,6 +11,9 @@ DEFAULT_DURATION = 240 # 4 minutes
 available_features = ["volume", "pitch", "cadence"]
 args = setup_interface_parser(available_features)
 
+# Build AnalysisOptions object to keep track of command line options
+options = construct_analysis_options(args)
+
 # Capture options, or use defaults
 u_length = DEFAULT_U_LENGTH
 start_time = DEFAULT_START_TIME
@@ -22,7 +25,7 @@ if args.duration: duration = args.duration
 print("⏳ 1/3 Pre-Processing Data...")
 
 # Build Recording list from arguments passed in command line
-recordings = get_recordings(args)
+recordings = get_recordings(audio_paths, start_time, duration)
 
 # Extract requested features from Recording list as matrix [volume, pitch, cadence, etc.] x [values for each]
 feature_matrices = extract_features(args, recordings)

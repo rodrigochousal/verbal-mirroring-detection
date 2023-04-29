@@ -13,7 +13,7 @@ def setup_interface_parser(feature_labels):
     # set up command line arguments
     parser = argparse.ArgumentParser(description='Analyze some recordings.')
     parser.add_argument("audio_list", help="path to file containing list of audio file paths")
-    parser.add_argument("--window_size", type=int, help="size of utterance frame, adjusts analysis fidelity (default 5s)")
+    parser.add_argument("--u_length", type=int, help="length of utterance in sec, adjusts analysis fidelity (default 2s)")
     parser.add_argument("--start_time", type=int, help="start time in seconds (default min)")
     parser.add_argument("--duration", type=int, help="duration in seconds (default max)")
     for label in feature_labels:

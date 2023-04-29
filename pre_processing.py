@@ -7,7 +7,6 @@ from conversation_model import *
 '''
 Pre-processing in data analysis is the process of cleaning and transforming raw data into a format that is suitable for analysis. It involves several steps, including:
 Data Cleaning: This step involves identifying and correcting errors, missing values, and inconsistencies in the dataset. The goal is to ensure that the data is accurate, complete, and consistent.
-Data Integration: This step involves combining data from multiple sources into a single dataset. The goal is to create a complete and comprehensive dataset that can be used for analysis.
 Data Transformation: This step involves converting the data into a format that is suitable for analysis. This may include converting data types, scaling data, or normalizing data.
 Data Reduction: This step involves reducing the size of the dataset without losing important information. This may include removing irrelevant variables, identifying outliers, or using dimensionality reduction techniques.
 Data Discretization: This step involves converting continuous data into categorical data. This may include binning data into intervals or creating categories based on specific criteria.
@@ -22,8 +21,6 @@ HOP_LENGTH = 256
 # Number of audio samples that are included in each analysis frame. Determines the frequency resolution
 # of the analysis and affects the level of detail that can be captured in the audio signal.
 FRAME_LENGTH = 512
-
-# Pre-Processing
 
 def get_recordings(args):
     # read in the list of file paths from the command line file
@@ -52,7 +49,7 @@ def get_recordings(args):
         # y: amplitude at a specific point in time
         # sr: # of samples of y that are taken per second (Hz)
         y, sr = librosa.core.load(path, offset=start_time, duration=duration)
-        recordings.append(Recording(path, y, sr))
+        recordings.append(Recording(path, y, sr, duration))
     return recordings
 
 def extract_features(args, recordings):
@@ -76,25 +73,28 @@ def extract_features(args, recordings):
         print("Analysing cadence of recordings...")
     return feature_matrices
 
-def clean_up(feature_matrices, window_size):
+def clean_up(feature_matrices, u_length, duration):
     for key, matrix in feature_matrices.items():
         for i, data in enumerate(matrix):
-            # z_normalized = replace_outliers_zscore(data, 2)
             rounded_data = []
             for x in data:
                 rounded = round(x, 6)
                 rounded_data.append(rounded)
+            window_size = int(len(data)*u_length/duration)
             downsampled = downsample(data, window_size)
             feature_matrices[key][i] = downsampled
     return feature_matrices
 
-def get_utterance_matrices(feature_matrices, window_size):
+def get_utterance_matrices(args, feature_matrices):
+    u_length = 0
+    if args.u_length:
+        u_length = args.u_length
     utterance_matrices = {}
     for key, matrix in feature_matrices.items():
-        utterance_matrices[key] = UtteranceMatrix(matrix, window_size)
+        utterance_matrices[key] = UtteranceMatrix(matrix, u_length)
     return utterance_matrices
 
-def get_conversations(utterance_matrices, window_size):
+def get_conversations(utterance_matrices, u_length):
     conversations = []
     for key, matrix_object in utterance_matrices.items():
         matrix = matrix_object.utterance_matrix
@@ -114,8 +114,8 @@ def get_conversations(utterance_matrices, window_size):
                     # capture silence
                     # TODO: What utterance prompts or responds to silence? Is this useful? <---
                     loudest_utterances[i] = Utterance(0, -1, loudest_utterances[i].start_time, loudest_utterances[i].end_time)
-        conversation_length = len(loudest_utterances)*window_size
-        conversation = Conversation(conversation_length, loudest_utterances, window_size)
+        conversation_length = len(loudest_utterances)*u_length
+        conversation = Conversation(conversation_length, loudest_utterances, u_length)
         conversation.summarize_speakers()
         conversations.append(conversation)
     return conversations

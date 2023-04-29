@@ -7,10 +7,10 @@ def prompt_to_response(conversation):
     conversation: A Conversation object containing a 2D matrix of utterances.
 
     Returns:
-    speaker_p2r_ratios: A dictionary containing speaker_id:[(prompt:repsonse ratio)]
+    p2r_conversation: A Conversation object containing prompt:repsonse ratio value
     '''
     # Calculate average feature ratio of prompt:response for each utterance
-    speaker_p2r_ratios = {}
+    p2r_conversation = conversation
     # For each utterance
     for i, u in enumerate(conversation.utterances):
         # Ignore silence or first utterance
@@ -24,13 +24,8 @@ def prompt_to_response(conversation):
                 break
         if (prev_nz_value == -1): continue
         # Calculate average feature ratio for prompt:response non-zero utterance
-        sid = u.speaker_id
-        p2r = prev_nz_value/u.value
-        if sid in speaker_p2r_ratios:
-            speaker_p2r_ratios[sid].append((p2r, u.length))
-        else:
-            speaker_p2r_ratios[sid] = [(p2r, u.length)]
-    return speaker_p2r_ratios
+        p2r_conversation.utterances[i].p2r = prev_nz_value/u.value
+    return p2r_conversation
 
 def response_to_response(conversation):
     '''
@@ -45,8 +40,7 @@ def response_to_response(conversation):
     '''
     # Calculate relative change in average feature value for same speaker's responses
     # compared to the prompter's relative change
-    speaker_r2r_ratios = {}
-    conversation_rr_ratios = []
+    r2r_conversation = conversation
     # For each significant utterance
     for i, u in enumerate(conversation.utterances):
         # Ignore first and second utterances
@@ -77,14 +71,5 @@ def response_to_response(conversation):
         # Calculate r2r
         speaker_change = curr_value_0/prev_value_0
         prompter_change = curr_value_1/prev_value_1
-        r2r = speaker_change/prompter_change
-        if sid in speaker_r2r_ratios:
-            speaker_r2r_ratios[sid].append((r2r, u.length))
-        else:
-            speaker_r2r_ratios[sid] = [(r2r, u.length)]
-    for key, ratios in speaker_r2r_ratios.items():
-        sum_of_ratios = 0
-        for ratio in ratios:
-            sum_of_ratios += ratio[0]
-        average_ratio = sum_of_ratios/len(ratios)
-        print(f"Speaker {key} average R2R ratio: {average_ratio:.4f}")
+        r2r_conversation.utterances[i].r2r = speaker_change/prompter_change
+    return r2r_conversation

@@ -1,10 +1,11 @@
 import numpy as np
 
 class Recording:
-    def __init__(self, file_path, y, sampling_rate):
+    def __init__(self, file_path, y, sampling_rate, duration):
         self.file_path = file_path
         self.y = y
         self.sampling_rate = sampling_rate
+        self.duration = duration
     @property
     def description(self):
         sr = f"Sampling Rate: {str(self.sampling_rate)} samples p/s"
@@ -19,6 +20,8 @@ class Utterance:
         self.speaker_id = speaker_id
         self.start_time = start_time
         self.end_time = end_time
+        self.p2r = None
+        self.r2r = None
     @property
     def length(self):
         return self.end_time-self.start_time
@@ -45,7 +48,6 @@ class Conversation:
         self.length = length # in seconds
         self.utterances = utterances # array of utterances
         self.window_size = window_size
-        
     def summarize_speakers(self):
         """
         Treat each consecutive utterance from the same speaker as one long, averaged, utterance
@@ -65,6 +67,12 @@ class Conversation:
                 folded = Utterance(new_value, s_utterance.speaker_id, s_utterance.start_time, new_end_time)
                 s_utterance = folded
         self.utterances = summarized_utterances
+    def unique_speaker_ids(self):
+        unique_speaker_ids = []
+        for u in self.utterances:
+            if not u.speaker_id in unique_speaker_ids:
+                unique_speaker_ids.append(u.speaker_id)
+        return unique_speaker_ids
     def print_description(self):
         for u in self.utterances:
             if u.speaker_id != -1:

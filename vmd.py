@@ -1,21 +1,23 @@
-import sys
-import os
-import argparse
-import numpy as np
-import librosa
-
-# project
 from interface import *
 from pre_processing import *
 from processing import *
+from post_processing import *
 
-# List of available features for analysis
-FEATURE_LABELS = ["volume", "pitch", "cadence"]
-# Determines the size of an utterance frame, adjusts analysis fidelity
-DEFAULT_WINDOW_SIZE = 5
+DEFAULT_U_LENGTH = 1 # 1-second utterances
+DEFAULT_START_TIME = 0
+DEFAULT_DURATION = 240 # 4 minutes
 
 # Build Parser object to read in options from command line
-args = setup_interface_parser(FEATURE_LABELS)
+available_features = ["volume", "pitch", "cadence"]
+args = setup_interface_parser(available_features)
+
+# Capture options, or use defaults
+u_length = DEFAULT_U_LENGTH
+start_time = DEFAULT_START_TIME
+duration = DEFAULT_DURATION
+if args.u_length: u_length = args.u_length
+if args.start_time: start_time = args.start_time
+if args.duration: duration = args.duration
 
 print("⏳ 1/3 Pre-Processing Data...")
 
@@ -26,16 +28,13 @@ recordings = get_recordings(args)
 feature_matrices = extract_features(args, recordings)
 
 # Clean up data (round, normalize, and downsample)
-# read in the window size for analysing audio files
-window_size = DEFAULT_WINDOW_SIZE
-if args.window_size: window_size = args.window_size
-feature_matrices = clean_up(feature_matrices, window_size)
+feature_matrices = clean_up(feature_matrices, u_length, duration)
 
 # Build UtteranceMatrix list from feature matrix list
-utterance_matrices = get_utterance_matrices(feature_matrices, window_size)
+utterance_matrices = get_utterance_matrices(feature_matrices, u_length)
 
 # Build Conversation list from UtteranceMatrix list; each represents a different feature
-conversations = get_conversations(utterance_matrices, window_size)
+conversations = get_conversations(utterance_matrices, u_length)
 
 # print transcription if argument was passed
 if args.transcription:
@@ -49,34 +48,35 @@ print("✅ Finished Pre-Processing Data")
 print("⏳ 2/3 Processing Data...")
 
 # For each conversation, perform the requested analysis
+analysed_conversations = []
 for c in rich_conversations:
     if args.p2r:
-        speaker_p2r_ratios = prompt_to_response(c)
-        for key, ratios in speaker_p2r_ratios.items():
-            sum_of_ratios = 0
-            for ratio in ratios:
-                sum_of_ratios += ratio[0]
-            average_ratio = sum_of_ratios/len(ratios)
-            print(f"Speaker {key} average P2R ratio: {average_ratio:.4f}")
+        p2r_conversation = prompt_to_response(c)
+        analysed_conversations.append(p2r_conversation)
+        # speaker_ratios = speaker_p2r_ratios
+        # for key, ratios in speaker_p2r_ratios.items():
+        #     sum_of_ratios = 0
+        #     for ratio in ratios:
+        #         sum_of_ratios += ratio[0]
+        #     average_ratio = sum_of_ratios/len(ratios)
+        #     print(f"Speaker {key} average P2R ratio: {average_ratio:.4f}")
     if args.r2r:
-        speaker_r2r_ratios = response_to_response(c)
-        for key, ratios in speaker_r2r_ratios.items():
-            sum_of_ratios = 0
-            for ratio in ratios:
-                sum_of_ratios += ratio[0]
-            average_ratio = sum_of_ratios/len(ratios)
-            print(f"Speaker {key} average R2R ratio: {average_ratio:.4f}")
+        r2r_conversation = response_to_response(c)
+        analysed_conversations.append(r2r_conversation)
+        # for key, ratios in speaker_r2r_ratios.items():
+        #     sum_of_ratios = 0
+        #     for ratio in ratios:
+        #         sum_of_ratios += ratio[0]
+        #     average_ratio = sum_of_ratios/len(ratios)
+        #     print(f"Speaker {key} average R2R ratio: {average_ratio:.4f}")
 
 print("✅ Finished Processing Data")
 print("⏳ 3/3 Post-Processing Data...")
 
-# Rebecca meeting notes:
+for c in analysed_conversations:
+    if args.p2r:
+        plot_p2r(c)
+    if args.r2r:
+        plot_r2r(c)
 
-# Focus on:
-    # 1 - Showings results
-        # Graphs, scatter plots, scoring, etc.
-        # Run program on the entire dataset
-        # Come up with some sort of conclusion about people mirroring each other
-    # 2 - Implementing more features
-        # Use librosa for more feature options
-    # 3 - Part of write-up is how to use the code (make it more readable, and include readme for command line)
+print("✅ Finished Post-Processing Data")

@@ -13,8 +13,6 @@ Data Discretization: This step involves converting continuous data into categori
 Feature Engineering: This step involves creating new features from existing data. This may include creating new variables based on existing variables, or transforming existing variables to create new insights.
 '''
 
-# List of valid audio file extensions
-AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac']
 # Number of audio samples that are skipped between successive analysis frames. 
 # Determines the overlap between adjacent frames and affects the temporal resolution of the analysis.
 HOP_LENGTH = 256
@@ -22,55 +20,47 @@ HOP_LENGTH = 256
 # of the analysis and affects the level of detail that can be captured in the audio signal.
 FRAME_LENGTH = 512
 
-def get_recordings(audio_paths, start_time, duration):
+def get_recordings(options):
     recordings = []
-    for path in audio_paths:
+    for path in options.file_paths:
         # y: amplitude at a specific point in time
         # sr: # of samples of y that are taken per second (Hz)
-        y, sr = librosa.core.load(path, offset=start_time, duration=duration)
-        recordings.append(Recording(path, y, sr, duration))
+        y, sr = librosa.core.load(path, offset=options.start_time, duration=options.duration)
+        recordings.append(Recording(path, y, sr, options.duration))
     return recordings
 
-def extract_features(args, recordings):
-    default_behavior = False
+def extract_features(options, recordings):
     feature_matrices = {}
-    if not (args.volume or args.pitch or args.cadence):
-        print("No argument passed, defaulting to analysing volume...")
-        default_behavior = True
-    if args.volume or default_behavior:
-        print("Analysing volume of recordings...")
-        rmse_matrix = []
-        for r in recordings:
-            data = librosa.feature.rms(y=r.y, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH, center=True)[0]
-            data =  np.array([x if x >= 0.1 else 0 for x in data])
-            # data =  np.array([x if x <= 1 else 0 for x in data])
-            rmse_matrix.append(data)
-        feature_matrices['volume'] = rmse_matrix
-    if args.pitch:
-        print("Analysing pitch of recordings...")
-    if args.cadence:
-        print("Analysing cadence of recordings...")
+    for feature, is_on in options.requested_features.items():
+        if not is_on: continue
+        print(f"Analysing {feature} of recordings...")
+        if feature == 'volume':
+            feature_matrices['volume'] = extract_rmse(recordings)
+        if feature == 'pitch':
+            print('To-do: Extract pitch')
+        if feature == 'cadence':
+            print('To-do: Extract cadence')
     return feature_matrices
 
-def clean_up(feature_matrices, duration, u_length):
+def clean_up(options, feature_matrices):
     for key, matrix in feature_matrices.items():
         for i, data in enumerate(matrix):
             rounded_data = []
             for x in data:
                 rounded = round(x, 6)
                 rounded_data.append(rounded)
-            window_size = int(len(data)*u_length/duration)
+            window_size = int(len(data)*options.u_length/options.duration)
             downsampled = downsample(data, window_size)
             feature_matrices[key][i] = downsampled
     return feature_matrices
 
-def get_utterance_matrices(feature_matrices, u_length):
+def get_utterance_matrices(options, feature_matrices):
     utterance_matrices = {}
     for key, matrix in feature_matrices.items():
-        utterance_matrices[key] = UtteranceMatrix(matrix, u_length)
+        utterance_matrices[key] = UtteranceMatrix(matrix, options.u_length)
     return utterance_matrices
 
-def get_conversations(utterance_matrices, u_length):
+def get_conversations(options, utterance_matrices):
     conversations = []
     for key, matrix_object in utterance_matrices.items():
         matrix = matrix_object.utterance_matrix
@@ -90,8 +80,8 @@ def get_conversations(utterance_matrices, u_length):
                     # capture silence
                     # TODO: What utterance prompts or responds to silence? Is this useful? <---
                     loudest_utterances[i] = Utterance(0, -1, loudest_utterances[i].start_time, loudest_utterances[i].end_time)
-        conversation_length = len(loudest_utterances)*u_length
-        conversation = Conversation(conversation_length, loudest_utterances, u_length)
+        conversation_length = len(loudest_utterances)*options.u_length
+        conversation = Conversation(conversation_length, loudest_utterances, options.u_length)
         conversation.summarize_speakers()
         conversations.append(conversation)
     return conversations
@@ -135,6 +125,15 @@ def normalize(data):
         n_value = (value - min_value) / (max_value - min_value)
         normalized_data.append(n_value)
     return normalized_data
+
+def extract_rmse(recordings):
+    rmse_matrix = []
+    for r in recordings:
+        data = librosa.feature.rms(y=r.y, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH, center=True)[0]
+        data =  np.array([x if x >= 0.1 else 0 for x in data])
+        # data =  np.array([x if x <= 1 else 0 for x in data]) # upper limit?
+        rmse_matrix.append(data)
+    return rmse_matrix
 
 def replace_outliers_zscore(data, threshold):
     """

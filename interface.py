@@ -1,22 +1,23 @@
 import os
 import argparse
 
+AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac']
 SUPPORTED_FEATURES = ["volume", "pitch", "cadence"]
 
-DEFAULT_U_LENGTH = 1 # 1-second utterances
+DEFAULT_U_LENGTH = 3 # 3-second utterances
 DEFAULT_START_TIME = 0
 DEFAULT_DURATION = 240 # 4 minutes
 
 class AnalysisOptions:
     def __init__(self, file_paths, u_length, start_time, duration, 
-                 requested_features, transcription_on, requested_analysis):
+                 requested_features, transcription_on, requested_analyses):
         self.file_paths = file_paths
         self.u_length = u_length
         self.start_time = start_time
         self.duration = duration
         self.requested_features = requested_features
         self.transcription_on = transcription_on
-        self.requested_analysis = requested_analysis
+        self.requested_analyses = requested_analyses
 
 def setup_interface_parser():
     '''
@@ -48,9 +49,9 @@ def construct_analysis_options(args):
     duration = DEFAULT_DURATION
     requested_features = {}
     transcription_on = False
-    requested_analysis = {}
+    requested_analyses = {}
     if args.audio_list:
-        audio_paths = parse_audio_paths(args.audio_list)
+        audio_paths = parse_audio_paths(args.audio_list, AUDIO_EXTENSIONS)
     if args.u_length:
         u_length = args.u_length
     if args.start_time:
@@ -68,13 +69,13 @@ def construct_analysis_options(args):
     if args.transcription:
         transcription_on = True
     if args.p2r:
-        requested_analysis['p2r'] = True
+        requested_analyses['p2r'] = True
     if args.r2r:
-        requested_analysis['r2r'] = True
-    if not bool(requested_analysis):
-        requested_analysis['p2r'] = True
+        requested_analyses['r2r'] = True
+    if not bool(requested_analyses):
+        requested_analyses['p2r'] = True
     return AnalysisOptions(audio_paths, u_length, start_time, duration, requested_features, 
-                           transcription_on, requested_analysis)
+                           transcription_on, requested_analyses)
 
 # Helpers
 

@@ -1,5 +1,14 @@
 import matplotlib.pyplot as plt
-import numpy as np
+
+def visualize(options, conversations):
+    for c in conversations:
+        for analysis, is_on in options.requested_analyses.items():
+            if not is_on: continue
+            print(f"Performing {analysis} analysis of recordings...")
+            if analysis == 'p2r':
+                plot_p2r(c)
+            if analysis == 'r2r':
+                plot_r2r(c)
 
 def plot_p2r(conversation):
     '''

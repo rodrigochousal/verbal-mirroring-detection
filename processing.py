@@ -1,3 +1,17 @@
+def extract_analyses(options, conversations):
+    analysed_conversations = []
+    for c in conversations:
+        for analysis, is_on in options.requested_analyses.items():
+            if not is_on: continue
+            print(f"Performing {analysis} analysis of recordings...")
+            if analysis == 'p2r':
+                p2r_conversation = prompt_to_response(c)
+                analysed_conversations.append(p2r_conversation)
+            if analysis == 'r2r':
+                r2r_conversation = response_to_response(c)
+                analysed_conversations.append(r2r_conversation)
+    return analysed_conversations
+
 def prompt_to_response(conversation):
     '''
     For each speaker in a conversation, calculates a feature's ratio of prompt to response.

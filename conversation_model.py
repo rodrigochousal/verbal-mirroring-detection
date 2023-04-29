@@ -1,17 +1,5 @@
 import numpy as np
 
-class AnalysisOptions:
-    def __init__(self, file_paths, u_length, start_time, duration, 
-                 feature_labels, transcription, r2r, p2r):
-        self.file_paths = file_paths
-        self.u_length = u_length
-        self.start_time = start_time
-        self.duration = duration
-        self.feature_labels = feature_labels
-        self.transcription = transcription
-        self.r2r = r2r
-        self.p2r = p2r
-
 class Recording:
     def __init__(self, file_path, y, sampling_rate, duration):
         self.file_path = file_path

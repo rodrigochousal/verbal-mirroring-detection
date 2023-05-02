@@ -1,5 +1,6 @@
 import os
 import argparse
+import librosa
 
 AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.flac']
 SUPPORTED_FEATURES = ["volume", "pitch", "cadence"]
@@ -52,6 +53,7 @@ def construct_analysis_options(args):
     requested_analyses = {}
     if args.audio_list:
         audio_paths = parse_audio_paths(args.audio_list, AUDIO_EXTENSIONS)
+        duration = librosa.get_duration(filename=audio_paths[0])
     if args.u_length:
         u_length = args.u_length
     if args.start_time:

@@ -40,19 +40,6 @@ print("⏳ 2/3 Processing Data...")
 
 # For each conversation, perform the requested analysis
 analysed_conversations = processing.extract_analyses(options, rich_conversations)
-# speaker_ratios = speaker_p2r_ratios
-# for key, ratios in speaker_p2r_ratios.items():
-#     sum_of_ratios = 0
-#     for ratio in ratios:
-#         sum_of_ratios += ratio[0]
-#     average_ratio = sum_of_ratios/len(ratios)
-#     print(f"Speaker {key} average P2R ratio: {average_ratio:.4f}")
-# for key, ratios in speaker_r2r_ratios.items():
-#     sum_of_ratios = 0
-#     for ratio in ratios:
-#         sum_of_ratios += ratio[0]
-#     average_ratio = sum_of_ratios/len(ratios)
-#     print(f"Speaker {key} average R2R ratio: {average_ratio:.4f}")
 
 print("✅ Finished Processing Data")
 print("----------------------------")

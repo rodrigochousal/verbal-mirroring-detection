@@ -37,7 +37,7 @@ def extract_features(options, recordings):
         if feature == 'volume':
             feature_matrices['volume'] = extract_rmse(recordings)
         if feature == 'pitch':
-            print('To-do: Extract pitch')
+            feature_matrices['pitch'] = extract_pitch(recordings)
         if feature == 'cadence':
             print('To-do: Extract cadence')
     return feature_matrices
@@ -127,6 +127,24 @@ def normalize(data):
     return normalized_data
 
 def extract_rmse(recordings):
+    rmse_matrix = []
+    for r in recordings:
+        data = librosa.feature.rms(y=r.y, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH, center=True)[0]
+        data =  np.array([x if x >= 0.1 else 0 for x in data])
+        # data =  np.array([x if x <= 1 else 0 for x in data]) # upper limit?
+        rmse_matrix.append(data)
+    return rmse_matrix
+
+def extract_pitch(recordings):
+    pitch_matrix = []
+    for r in recordings:
+        freqs, magnitudes = librosa.piptrack(y=r.y, sr=r.sampling_rate)
+        max_magnitudes = magnitudes.argmax(axis=0)
+        pitch_matrix.append(freqs[max_magnitudes])
+    return pitch_matrix
+
+def extract_cadence(recordings):
+    # Pending work
     rmse_matrix = []
     for r in recordings:
         data = librosa.feature.rms(y=r.y, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH, center=True)[0]

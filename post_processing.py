@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 def visualize(options, conversations):
     for c in conversations:
@@ -7,11 +8,14 @@ def visualize(options, conversations):
             if not is_on: continue
             print(f"Performing {analysis} analysis of recordings...")
             if analysis == 'p2r':
-                plot_p2r(c)
+                plot_p2r_scatter(c)
+                plot_p2r_kdeplot(c)
             if analysis == 'r2r':
-                plot_r2r(c)
+                plot_r2r_scatter(c)
+                plot_r2r_kdeplot(c)
 
-def plot_p2r(conversation):
+
+def plot_p2r_scatter(conversation):
     '''
     Plot a scatter plot with values y being float and x being time.
 
@@ -54,7 +58,7 @@ def plot_p2r(conversation):
     # show the plot
     plt.show()
 
-def plot_r2r(conversation):
+def plot_r2r_scatter(conversation):
     '''
     Plot a scatter plot with values y being float and x being time.
 
@@ -93,6 +97,78 @@ def plot_r2r(conversation):
     # set the x-axis label, y-axis label, and title
     plt.xlabel('Time (s)')
     plt.ylabel('R2R Ratio')
+    plt.title('Speaker Ratios')
+    plt.legend()
+
+    # show the plot
+    plt.show()
+
+
+def plot_p2r_kdeplot(conversation):
+    '''
+    Plot a kernel density plot with values y being float and x being time.
+
+    Args:
+    conversation: A Conversation object containing utterances.
+
+    Returns:
+    None
+    '''
+    for id in conversation.unique_speaker_ids():
+        time_values = []
+        analysis_values = []
+        for u in conversation.utterances:
+            if u.speaker_id == id:
+                if u.p2r is not None:
+                    analysis_values.append(u.p2r)
+                    time_values.append(u.start_time)
+        time_values = np.array(time_values)
+        analysis_values = np.array(analysis_values)
+        if len(time_values) == 0 or len(analysis_values) == 0:
+            # skip if no valid values found
+            continue
+        # create kernel density plot using Seaborn
+        sns.kdeplot(data=analysis_values, label=f"Speaker {id}")
+        
+    # set the x-axis label, y-axis label, and title
+    plt.xlabel('P2R Ratio')
+    plt.ylabel('Density')
+    plt.title('Speaker Ratios')
+    plt.legend()
+
+    # show the plot
+    plt.show()
+
+
+def plot_r2r_kdeplot(conversation):
+    '''
+    Plot a kernel density plot with values y being float and x being time.
+
+    Args:
+    conversation: A Conversation object containing utterances.
+
+    Returns:
+    None
+    '''
+    for id in conversation.unique_speaker_ids():
+        time_values = []
+        analysis_values = []
+        for u in conversation.utterances:
+            if u.speaker_id == id:
+                if u.p2r is not None:
+                    analysis_values.append(u.r2r)
+                    time_values.append(u.start_time)
+        time_values = np.array(time_values)
+        analysis_values = np.array(analysis_values)
+        if len(time_values) == 0 or len(analysis_values) == 0:
+            # skip if no valid values found
+            continue
+        # create kernel density plot using Seaborn
+        sns.kdeplot(data=analysis_values, label=f"Speaker {id}")
+        
+    # set the x-axis label, y-axis label, and title
+    plt.xlabel('R2R Ratio')
+    plt.ylabel('Density')
     plt.title('Speaker Ratios')
     plt.legend()
 
